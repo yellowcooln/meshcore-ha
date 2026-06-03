@@ -1084,6 +1084,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 "iata": user_input.get("iata", legacy_global_iata),
                 "token_ttl_seconds": user_input.get("token_ttl_seconds", legacy_global_ttl),
                 "payload_mode": user_input.get("payload_mode", "packet"),
+                "publish_contact_events": user_input.get("publish_contact_events", False),
             }
             new_data = copy.deepcopy(dict(self.config_entry.data))
             new_data[CONF_MQTT_BROKERS] = brokers
@@ -1110,6 +1111,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     "raw": "Raw Event",
                 }
             ),
+            vol.Optional(
+                "publish_contact_events",
+                default=broker.get("publish_contact_events", False),
+            ): cv.boolean,
             vol.Optional(
                 "token_ttl_seconds",
                 default=broker.get("token_ttl_seconds", legacy_global_ttl),

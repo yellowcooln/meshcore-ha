@@ -105,16 +105,19 @@ MQTT publishing behavior depends on broker `Payload Mode`.
 - Publishes packet-style payloads only (RX/RF/PACKET path)
 - Uses topic shape `meshcore/{IATA}/{PUBLIC_KEY}/packets` by default
 - Normalizes RX/RF packet data into legacy packet JSON fields (`type=PACKET`, `direction`, `route`, `packet_type`, `hash`, etc.)
+- Does not publish contact names or full contact event payloads
 - Applies duplicate suppression to reduce duplicate callback publishes
 
 ### `raw` mode
 
-- Publishes raw event payloads without packet normalization
+- Publishes raw event payloads without packet normalization. Mesh-originated strings in raw payloads are untrusted data; dashboards, analyzers, and other MQTT consumers must escape values before inserting them into HTML or the DOM.
+- Contact events are not published by default in raw mode because they can include attacker-controlled advertised node names. Enable **Raw Mode: Publish Contact Events** only when downstream consumers handle those fields as untrusted data.
 - Payload includes:
   - `event_type`
   - `payload` (sanitized MeshCore event payload)
   - `timestamp`
-  - `origin` / `origin_id`
+  - `origin` / `origin_slug` / `origin_id`
+  - `security.contains_untrusted_mesh_data`
 
 Packet publishes are non-retained. Status publishes (`online` / `offline` / LWT) are retained.
 

@@ -202,10 +202,15 @@
           "owner_public_key": "Owner Public Key (JWT owner claim)",
           "owner_email": "Owner Email (JWT email claim)",
           "payload_mode": "Payload Mode",
+          "publish_contact_events": "Raw Mode: Publish Contact Events",
           "token_ttl_seconds": "Auth Token TTL (seconds)",
           "topic_status": "Status Topic",
           "topic_events": "Packets Topic",
           "iata": "Broker IATA Code"
+        },
+        "data_description": {
+          "payload_mode": "Packet mode publishes normalized packet metadata and avoids contact names. Raw mode republishes mesh-originated event data as JSON; MQTT consumers must escape values before HTML/DOM rendering.",
+          "publish_contact_events": "Off by default. Contact events can include attacker-controlled advertised node names. Only enable this for raw mode when downstream MQTT consumers treat these fields as untrusted data."
         },
         "description": "Configure MQTT broker {broker_number}",
         "title": "MQTT Broker Settings"
@@ -332,11 +337,16 @@
           "owner_public_key": "Owner Public Key (JWT owner claim)",
           "owner_email": "Owner Email (JWT email claim)",
           "payload_mode": "Payload Mode",
+          "publish_contact_events": "Raw Mode: Publish Contact Events",
           "token_ttl_seconds": "Auth Token TTL (seconds)",
           "topic_status": "Status Topic",
           "topic_events": "Packets Topic",
           "iata": "Broker IATA Code",
           "client_id_prefix": "Client ID Prefix"
+        },
+        "data_description": {
+          "payload_mode": "Packet mode publishes normalized packet metadata and avoids contact names. Raw mode republishes mesh-originated event data as JSON; MQTT consumers must escape values before HTML/DOM rendering.",
+          "publish_contact_events": "Off by default. Contact events can include attacker-controlled advertised node names. Only enable this for raw mode when downstream MQTT consumers treat these fields as untrusted data."
         },
         "description": "Configure MQTT broker {broker_number}",
         "title": "MQTT Broker Settings"

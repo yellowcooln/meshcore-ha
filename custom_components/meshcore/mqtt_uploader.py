@@ -71,6 +71,7 @@ class BrokerConfig:
     owner_email: str
     token_ttl_seconds: int
     payload_mode: str
+    publish_contact_events: bool
     client_id_prefix: str
     topic_status: str
     topic_packets: str
@@ -283,6 +284,10 @@ class MeshCoreMqttUploader:
                 payload_mode=str(
                     broker_settings.get("payload_mode", "packet") or "packet"
                 ).strip().lower(),
+                publish_contact_events=_as_bool(
+                    broker_settings.get("publish_contact_events"),
+                    False,
+                ),
                 client_id_prefix=str(
                     broker_settings.get("client_id_prefix", "meshcore_") or "meshcore_"
                 ).strip(),
@@ -341,6 +346,25 @@ class MeshCoreMqttUploader:
         client_id = f"{prefix}{raw.replace(' ', '_')}"
         client_id = re.sub(r"[^a-zA-Z0-9_-]", "", client_id)
         return client_id[:23]
+
+    @staticmethod
+    def _safe_display_text(raw: Any, fallback: str = "meshcore") -> str:
+        """Constrain display text used in retained/shared MQTT metadata."""
+        value = str(raw or "").strip()
+        if not value:
+            value = fallback
+        value = re.sub(r"[\x00-\x1f\x7f]", "", value)
+        value = re.sub(r"[<>&\"']", "", value)
+        value = re.sub(r"\s+", " ", value).strip()
+        return (value or fallback)[:64]
+
+    @staticmethod
+    def _slug_text(raw: Any, fallback: str = "meshcore") -> str:
+        """Build a stable lowercase identifier for MQTT consumers."""
+        value = str(raw or "").lower()
+        value = re.sub(r"[^a-z0-9_-]+", "_", value)
+        value = re.sub(r"_+", "_", value).strip("_")
+        return (value or fallback)[:64]
 
     async def async_start(self) -> None:
         """Initialize configured MQTT clients and publish online status."""
@@ -820,7 +844,8 @@ class MeshCoreMqttUploader:
         payload: dict[str, Any] = {
             "status": state,
             "timestamp": datetime.now().isoformat(),
-            "origin": self.node_name,
+            "origin": self._safe_display_text(self.node_name),
+            "origin_slug": self._slug_text(self.node_name),
             "origin_id": self.public_key or "DEVICE",
             "source": "meshcore-ha",
             "client_version": self.client_agent or "meshcore-dev/meshcore-ha:unknown",
@@ -1013,14 +1038,39 @@ class MeshCoreMqttUploader:
                 self.logger.debug("Status refresh loop error: %s", ex)
                 await asyncio.sleep(30)
 
+    @staticmethod
+    def _raw_event_name(event_type: str) -> str:
+        """Normalize EventType string/repr values for raw-mode policy checks."""
+        event_name = str(event_type or "").upper()
+        if "." in event_name:
+            event_name = event_name.rsplit(".", 1)[-1]
+        return re.sub(r"[^A-Z0-9_]+", "_", event_name).strip("_")
+
+    def _should_publish_raw_event(self, broker: BrokerConfig, event_type: str) -> bool:
+        """Apply raw-mode policy before publishing full MeshCore event payloads."""
+        if broker.publish_contact_events:
+            return True
+        event_name = self._raw_event_name(event_type)
+        return not (
+            event_name == "CONTACTS"
+            or event_name.startswith("CONTACTS_")
+            or event_name == "NEW_CONTACT"
+            or event_name.startswith("NEW_CONTACT_")
+        )
+
     def _build_raw_event_payload(self, event_type: str, payload: Any) -> dict[str, Any]:
         """Build raw event payload for non-normalized broker mode."""
         return {
             "timestamp": datetime.now().isoformat(),
-            "origin": self.node_name,
+            "origin": self._safe_display_text(self.node_name),
+            "origin_slug": self._slug_text(self.node_name),
             "origin_id": self.public_key or "DEVICE",
             "source": "meshcore-ha",
             "event_type": (event_type or "").upper(),
+            "security": {
+                "contains_untrusted_mesh_data": True,
+                "rendering": "escape before HTML/DOM use",
+            },
             "payload": payload,
         }
 
@@ -1077,6 +1127,13 @@ class MeshCoreMqttUploader:
             payload_to_publish: str | None = None
             mode = broker.payload_mode if broker.payload_mode in {"packet", "raw"} else "packet"
             if mode == "raw":
+                if not self._should_publish_raw_event(broker, event_type):
+                    self.logger.debug(
+                        "[%s] Raw event skipped by contact-event policy: %s",
+                        broker.name,
+                        event_type,
+                    )
+                    continue
                 if raw_payload is None:
                     raw_payload = json.dumps(self._build_raw_event_payload(event_type, payload))
                 payload_to_publish = raw_payload
@@ -1210,7 +1267,8 @@ class MeshCoreMqttUploader:
 
         packet = {
             "timestamp": now.isoformat(),
-            "origin": self.node_name,
+            "origin": self._safe_display_text(self.node_name),
+            "origin_slug": self._slug_text(self.node_name),
             "origin_id": self.public_key or "DEVICE",
             "type": "PACKET",
             "direction": "rx",
