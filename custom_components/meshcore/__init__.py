@@ -62,6 +62,7 @@ _LOGGER = logging.getLogger(__name__)
 # List of platforms to set up
 PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT, Platform.TEXT, Platform.DEVICE_TRACKER]
 STATIC_PATH_REGISTERED_KEY = f"{DOMAIN}_static_path_registered"
+_SENSITIVE_CONFIG_KEYS = {"password", "private_key", "channel_secret", "token"}
 
 
 def _read_integration_version() -> str:
@@ -73,6 +74,24 @@ def _read_integration_version() -> str:
         return version or "unknown"
     except Exception:
         return "unknown"
+
+
+def _redact_sensitive_mapping(data):
+    """Return a debug-safe copy of nested config/event data."""
+    if isinstance(data, dict):
+        redacted = {}
+        for key, value in data.items():
+            key_text = str(key).lower()
+            if any(sensitive in key_text for sensitive in _SENSITIVE_CONFIG_KEYS):
+                redacted[key] = "***REDACTED***" if value else value
+            else:
+                redacted[key] = _redact_sensitive_mapping(value)
+        return redacted
+    if isinstance(data, list):
+        return [_redact_sensitive_mapping(value) for value in data]
+    if isinstance(data, tuple):
+        return tuple(_redact_sensitive_mapping(value) for value in data)
+    return data
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
@@ -311,7 +330,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Get configuration from entry
     connection_type = entry.data[CONF_CONNECTION_TYPE]
     
-    _LOGGER.debug("Entry data: %s", entry.data)
+    _LOGGER.debug("Entry data: %s", _redact_sensitive_mapping(entry.data))
     
     # Create API instance based on connection type
     api_kwargs = {
@@ -545,7 +564,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         event_type_str = str(event.type) if hasattr(event, "type") else "UNKNOWN"
 
         try:
-            sanitized_payload = sanitize_event_data(event.payload)
+            sanitized_payload = _redact_sensitive_mapping(
+                sanitize_event_data(event.payload)
+            )
 
             # Special handling for RX_LOG events
             if hasattr(event, "type") and event.type == EventType.RX_LOG_DATA:
@@ -617,7 +638,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     _LOGGER.debug(f"Stored RX_LOG for correlation: ch={channel_idx}, hash={hash_key[:8]}")
 
             # Fire event to HA event bus with sanitized payload
-            _LOGGER.debug(f"Firing event to HA event bus: {event}")
+            _LOGGER.debug(
+                "Firing event to HA event bus: type=%s payload=%s",
+                event_type_str,
+                sanitized_payload,
+            )
             hass.bus.async_fire(f"{DOMAIN}_raw_event", {
                 "event_type": event_type_str,
                 "payload": sanitized_payload,

@@ -69,6 +69,16 @@ _LOGGER = logging.getLogger(__name__)
 MSG_SAFETY_NET_INTERVAL: int = 60
 
 
+def _redact_channel_info_for_log(channel_info: Any) -> Any:
+    """Return channel info with shared secrets removed for debug logging."""
+    if not isinstance(channel_info, dict):
+        return channel_info
+    redacted = dict(channel_info)
+    if "channel_secret" in redacted:
+        redacted["channel_secret"] = "***REDACTED***" if redacted["channel_secret"] else redacted["channel_secret"]
+    return redacted
+
+
 class MeshCoreDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the MeshCore node and trigger event-generating commands."""
 
@@ -531,7 +541,11 @@ class MeshCoreDataUpdateCoordinator(DataUpdateCoordinator):
                 channel_idx = event.payload.get("channel_idx")
                 if channel_idx is not None:
                     self._channel_info[channel_idx] = event.payload
-                    self.logger.debug(f"Saved channel info for channel {channel_idx}: {event.payload}")
+                    self.logger.debug(
+                        "Saved channel info for channel %s: %s",
+                        channel_idx,
+                        _redact_channel_info_for_log(event.payload),
+                    )
             except Exception as ex:
                 self.logger.error(f"Error handling CHANNEL_INFO event: {ex}")
         
@@ -551,7 +565,11 @@ class MeshCoreDataUpdateCoordinator(DataUpdateCoordinator):
                 channel_info_result = await self.api.mesh_core.commands.get_channel(channel_idx)
                 if channel_info_result and channel_info_result.type == EventType.CHANNEL_INFO:
                     self._channel_info[channel_idx] = channel_info_result.payload
-                    self.logger.debug(f"Fetched channel info for channel {channel_idx}: {channel_info_result.payload}")
+                    self.logger.debug(
+                        "Fetched channel info for channel %s: %s",
+                        channel_idx,
+                        _redact_channel_info_for_log(channel_info_result.payload),
+                    )
                 else:
                     self.logger.warning(f"Failed to get channel info for channel {channel_idx}")
             except Exception as ex:

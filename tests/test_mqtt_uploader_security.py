@@ -184,6 +184,30 @@ def test_raw_mode_contact_events_can_be_explicitly_enabled():
     assert published["security"]["rendering"] == "escape before HTML/DOM use"
 
 
+def test_raw_mode_never_publishes_channel_info():
+    client = _Client()
+    uploader = _uploader(_broker("raw", publish_contact_events=True), client)
+
+    uploader.publish_raw_event(
+        "EventType.CHANNEL_INFO",
+        {"channel_idx": 0, "channel_secret": "00112233445566778899aabbccddeeff"},
+    )
+
+    assert client.published == []
+
+
+def test_raw_mode_never_publishes_private_key():
+    client = _Client()
+    uploader = _uploader(_broker("raw", publish_contact_events=True), client)
+
+    uploader.publish_raw_event(
+        "EventType.PRIVATE_KEY",
+        {"private_key": "00" * 64},
+    )
+
+    assert client.published == []
+
+
 def test_raw_mode_non_contact_payload_marks_untrusted_data():
     client = _Client()
     uploader = _uploader(_broker("raw"), client)

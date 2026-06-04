@@ -1048,9 +1048,13 @@ class MeshCoreMqttUploader:
 
     def _should_publish_raw_event(self, broker: BrokerConfig, event_type: str) -> bool:
         """Apply raw-mode policy before publishing full MeshCore event payloads."""
+        event_name = self._raw_event_name(event_type)
+        if event_name in {"CHANNEL_INFO", "PRIVATE_KEY"}:
+            return False
+        if event_name.startswith("CHANNEL_INFO_") or event_name.startswith("PRIVATE_KEY_"):
+            return False
         if broker.publish_contact_events:
             return True
-        event_name = self._raw_event_name(event_type)
         return not (
             event_name == "CONTACTS"
             or event_name.startswith("CONTACTS_")
