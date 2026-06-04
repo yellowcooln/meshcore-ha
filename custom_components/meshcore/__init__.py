@@ -109,9 +109,22 @@ def _payload_debug_summary(payload):
     return {"type": type(payload).__name__}
 
 
-def _entry_debug_summary(entry_data):
+def _entry_debug_summary(entry_or_data):
     """Return a compact config-entry summary without dumping broker settings."""
-    brokers = entry_data.get(CONF_MQTT_BROKERS, {}) if isinstance(entry_data, dict) else {}
+    if isinstance(entry_or_data, dict):
+        entry_data = entry_or_data
+        entry_options = {}
+    else:
+        entry_data = getattr(entry_or_data, "data", {}) or {}
+        entry_options = getattr(entry_or_data, "options", {}) or {}
+
+    broker_sources = []
+    for source in (entry_data, entry_options):
+        if isinstance(source, dict):
+            broker_sources.append(source.get(CONF_MQTT_BROKERS, {}))
+            broker_sources.append(source.get("mqtt_brokers", {}))
+
+    brokers = next((value for value in broker_sources if isinstance(value, dict) and value), {})
     enabled_brokers = 0
     if isinstance(brokers, dict):
         enabled_brokers = sum(
@@ -123,7 +136,7 @@ def _entry_debug_summary(entry_data):
         "connection_type": entry_data.get(CONF_CONNECTION_TYPE),
         "mqtt_brokers": len(brokers) if isinstance(brokers, dict) else 0,
         "mqtt_brokers_enabled": enabled_brokers,
-        "map_upload_enabled": entry_data.get("map_upload_enabled"),
+        "map_upload_enabled": entry_data.get("map_upload_enabled", entry_options.get("map_upload_enabled")),
     }
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -363,7 +376,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Get configuration from entry
     connection_type = entry.data[CONF_CONNECTION_TYPE]
     
-    _LOGGER.debug("Entry summary: %s", _entry_debug_summary(entry.data))
+    _LOGGER.debug("Entry summary: %s", _entry_debug_summary(entry))
     
     # Create API instance based on connection type
     api_kwargs = {
