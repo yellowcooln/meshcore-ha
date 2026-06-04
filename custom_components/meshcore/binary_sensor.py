@@ -117,8 +117,6 @@ def handle_contact_message(event, coordinator, async_add_entities):
     if not event or not hasattr(event, "payload") or not event.payload:
         return
         
-    _LOGGER.debug(f"Received contact message event: {event}")
-    
     # Skip if we don't have meshcore
     if not coordinator.api.mesh_core:
         return
@@ -126,6 +124,7 @@ def handle_contact_message(event, coordinator, async_add_entities):
     # Extract pubkey_prefix from the event payload
     payload = event.payload
     pubkey_prefix = payload.get("pubkey_prefix")
+    _LOGGER.debug("Received contact message event from %s", pubkey_prefix or "unknown")
     
     # Add contact to logbook
     if pubkey_prefix not in coordinator.tracked_contacts:
@@ -158,8 +157,6 @@ async def handle_channel_message(event, coordinator, async_add_entities):
     if not event or not hasattr(event, "payload") or not event.payload:
         return
 
-    _LOGGER.debug(f"Received channel message event: {event}")
-
     # Skip if we don't have meshcore
     if not coordinator.api.mesh_core:
         return
@@ -167,6 +164,7 @@ async def handle_channel_message(event, coordinator, async_add_entities):
     # Extract channel_idx from the event payload
     payload = event.payload
     channel_idx = payload.get("channel_idx")
+    _LOGGER.debug("Received channel message event for channel %s", channel_idx)
 
     # Skip if no channel_idx or if channels are already added
     if channel_idx is None or hasattr(coordinator, "channels_added") and coordinator.channels_added:

@@ -336,8 +336,8 @@ def parse_and_decrypt_rx_log(payload: Any, channels_info: dict[int, dict]) -> di
                             "path_hash_size": path_hash_size,
                         }
                         _LOGGER.debug(
-                            "Decrypted RX_LOG via SDK fields for channel %d: %s",
-                            channel_idx, message_text[:50],
+                            "Decrypted RX_LOG via SDK fields for channel %d",
+                            channel_idx,
                         )
                         break
 
@@ -439,8 +439,8 @@ def parse_and_decrypt_rx_log(payload: Any, channels_info: dict[int, dict]) -> di
                         "path_hash_size": path_hash_size,
                     }
                     _LOGGER.debug(
-                        "Decrypted RX_LOG via raw parse for channel %d: %s",
-                        channel_idx, message_text[:50],
+                        "Decrypted RX_LOG via raw parse for channel %d",
+                        channel_idx,
                     )
                     break
 
@@ -651,4 +651,3 @@ def parse_rx_log_data(payload: Any) -> dict[str, Any]:
         _LOGGER.debug("Error parsing RX_LOG data: %s", ex)
 
     return result
-

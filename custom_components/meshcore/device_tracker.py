@@ -49,14 +49,13 @@ class DeviceTrackerManager:
         
     async def _handle_gps_telemetry_event(self, event: Event):
         """Handle incoming telemetry events and discover new GPS trackers."""
-        _LOGGER.debug(f"Received telemetry event for GPS tracking: {event}")
-        
         if not event.payload or "lpp" not in event.payload:
             _LOGGER.debug("No LPP data in telemetry event")
             return
 
         pubkey_prefix = event.payload.get("pubkey_prefix", "")
         lpp_data = event.payload.get("lpp", [])
+        _LOGGER.debug("Received GPS telemetry event from %s", pubkey_prefix or "unknown")
         
         # If no pubkey_prefix, this might be self telemetry
         if not pubkey_prefix:

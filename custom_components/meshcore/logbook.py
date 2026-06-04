@@ -211,11 +211,10 @@ async def handle_channel_message(event, coordinator) -> None:
             )
 
         _LOGGER.debug(
-            "Logged channel message in %s from %s%s: %s",
+            "Logged channel message in %s from %s%s",
             channel_name,
             sender_name,
             f" ({sender_pubkey[:6]})" if sender_pubkey else "",
-            message_text[:50] + ("..." if len(message_text) > 50 else "")
         )
     except Exception as ex:
         _LOGGER.error("Error handling channel message: %s", ex, exc_info=True)
@@ -355,10 +354,9 @@ def handle_contact_message(event, coordinator) -> None:
         hass.bus.async_fire(EVENT_MESHCORE_MESSAGE, event_data)
 
         _LOGGER.debug(
-            "Logged direct message from %s (%s): %s",
+            "Logged direct message from %s (%s)",
             contact_name,
             pubkey_prefix[:6],
-            message_text[:50] + ("..." if len(message_text) > 50 else "")
         )
     except Exception as ex:
         _LOGGER.error("Error handling contact message: %s", ex, exc_info=True)
@@ -417,10 +415,9 @@ async def handle_outgoing_message(event_data, coordinator) -> None:
         hass.bus.async_fire(EVENT_MESHCORE_MESSAGE, logbook_event)
 
         _LOGGER.debug(
-            "Logged outgoing direct message to %s (%s): %s (ack: %s)",
+            "Logged outgoing direct message to %s (%s) (ack: %s)",
             receiver_name,
             pubkey_prefix[:6] if pubkey_prefix else "",
-            message_text[:50] + ("..." if len(message_text) > 50 else ""),
             "yes" if ack_received else ("no" if ack_received is False else "n/a")
         )
         
@@ -539,8 +536,7 @@ async def handle_outgoing_message(event_data, coordinator) -> None:
             hass.bus.async_fire(EVENT_MESHCORE_MESSAGE, logbook_event)
 
         _LOGGER.debug(
-            "Logged outgoing channel message to %s: %s (repeaters: %s)",
+            "Logged outgoing channel message to %s (repeaters: %s)",
             channel_name,
-            message_text[:50] + ("..." if len(message_text) > 50 else ""),
             logbook_event.get("repeater_count", "unknown")
         )

@@ -37,6 +37,7 @@ from .const import (
     CONF_REPEATER_SUBSCRIPTIONS,
     CONF_LIMIT_DISCOVERED_CONTACTS,
     CONF_MAX_DISCOVERED_CONTACTS,
+    CONF_MQTT_BROKERS,
     DEFAULT_MAX_DISCOVERED_CONTACTS,
     CONF_FLOOD_SCOPES,
     CONF_MESSAGES_INTERVAL,
@@ -110,7 +111,7 @@ def _payload_debug_summary(payload):
 
 def _entry_debug_summary(entry_data):
     """Return a compact config-entry summary without dumping broker settings."""
-    brokers = entry_data.get("mqtt_brokers", {}) if isinstance(entry_data, dict) else {}
+    brokers = entry_data.get(CONF_MQTT_BROKERS, {}) if isinstance(entry_data, dict) else {}
     enabled_brokers = 0
     if isinstance(brokers, dict):
         enabled_brokers = sum(
