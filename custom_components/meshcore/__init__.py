@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import time
+from collections.abc import Mapping
 from pathlib import Path
 from datetime import timedelta
 from meshcore.events import EventType
@@ -79,7 +80,7 @@ def _read_integration_version() -> str:
 
 def _redact_sensitive_mapping(data):
     """Return a debug-safe copy of nested config/event data."""
-    if isinstance(data, dict):
+    if isinstance(data, Mapping):
         redacted = {}
         for key, value in data.items():
             key_text = str(key).lower()
@@ -97,7 +98,7 @@ def _redact_sensitive_mapping(data):
 
 def _payload_debug_summary(payload):
     """Return a compact payload summary for debug logs."""
-    if isinstance(payload, dict):
+    if isinstance(payload, Mapping):
         return {
             "type": "dict",
             "keys": sorted(str(key) for key in payload.keys()),
@@ -111,7 +112,7 @@ def _payload_debug_summary(payload):
 
 def _entry_debug_summary(entry_or_data):
     """Return a compact config-entry summary without dumping broker settings."""
-    if isinstance(entry_or_data, dict):
+    if isinstance(entry_or_data, Mapping):
         entry_data = entry_or_data
         entry_options = {}
     else:
@@ -120,21 +121,21 @@ def _entry_debug_summary(entry_or_data):
 
     broker_sources = []
     for source in (entry_data, entry_options):
-        if isinstance(source, dict):
+        if isinstance(source, Mapping):
             broker_sources.append(source.get(CONF_MQTT_BROKERS, {}))
             broker_sources.append(source.get("mqtt_brokers", {}))
 
-    brokers = next((value for value in broker_sources if isinstance(value, dict) and value), {})
+    brokers = next((value for value in broker_sources if isinstance(value, Mapping) and value), {})
     enabled_brokers = 0
-    if isinstance(brokers, dict):
+    if isinstance(brokers, Mapping):
         enabled_brokers = sum(
             1
             for broker in brokers.values()
-            if isinstance(broker, dict) and broker.get("enabled")
+            if isinstance(broker, Mapping) and broker.get("enabled")
         )
     return {
         "connection_type": entry_data.get(CONF_CONNECTION_TYPE),
-        "mqtt_brokers": len(brokers) if isinstance(brokers, dict) else 0,
+        "mqtt_brokers": len(brokers) if isinstance(brokers, Mapping) else 0,
         "mqtt_brokers_enabled": enabled_brokers,
         "map_upload_enabled": entry_data.get("map_upload_enabled", entry_options.get("map_upload_enabled")),
     }
