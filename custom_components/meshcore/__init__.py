@@ -93,6 +93,38 @@ def _redact_sensitive_mapping(data):
         return tuple(_redact_sensitive_mapping(value) for value in data)
     return data
 
+
+def _payload_debug_summary(payload):
+    """Return a compact payload summary for debug logs."""
+    if isinstance(payload, dict):
+        return {
+            "type": "dict",
+            "keys": sorted(str(key) for key in payload.keys()),
+        }
+    if isinstance(payload, list):
+        return {"type": "list", "len": len(payload)}
+    if isinstance(payload, tuple):
+        return {"type": "tuple", "len": len(payload)}
+    return {"type": type(payload).__name__}
+
+
+def _entry_debug_summary(entry_data):
+    """Return a compact config-entry summary without dumping broker settings."""
+    brokers = entry_data.get("mqtt_brokers", {}) if isinstance(entry_data, dict) else {}
+    enabled_brokers = 0
+    if isinstance(brokers, dict):
+        enabled_brokers = sum(
+            1
+            for broker in brokers.values()
+            if isinstance(broker, dict) and broker.get("enabled")
+        )
+    return {
+        "connection_type": entry_data.get(CONF_CONNECTION_TYPE),
+        "mqtt_brokers": len(brokers) if isinstance(brokers, dict) else 0,
+        "mqtt_brokers_enabled": enabled_brokers,
+        "map_upload_enabled": entry_data.get("map_upload_enabled"),
+    }
+
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     _LOGGER.debug("Migrating configuration from version %s", config_entry.version)
@@ -330,7 +362,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Get configuration from entry
     connection_type = entry.data[CONF_CONNECTION_TYPE]
     
-    _LOGGER.debug("Entry data: %s", _redact_sensitive_mapping(entry.data))
+    _LOGGER.debug("Entry summary: %s", _entry_debug_summary(entry.data))
     
     # Create API instance based on connection type
     api_kwargs = {
@@ -639,9 +671,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
             # Fire event to HA event bus with sanitized payload
             _LOGGER.debug(
-                "Firing event to HA event bus: type=%s payload=%s",
+                "Firing event to HA event bus: type=%s payload_summary=%s",
                 event_type_str,
-                sanitized_payload,
+                _payload_debug_summary(sanitized_payload),
             )
             hass.bus.async_fire(f"{DOMAIN}_raw_event", {
                 "event_type": event_type_str,
